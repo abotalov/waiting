@@ -40,11 +40,13 @@ def iterwait(predicate, timeout_seconds=None, sleep_seconds=1, result=None, wait
     sleep_generator = _get_sleep_generator(timeout, sleep_seconds)
     while True:
         with _end_sleeping(next(sleep_generator)) as cancel_sleep:
+            exception_message = None
             try:
                 result.result = predicate()
                 if on_poll is not None:
                     on_poll()
-            except expected_exceptions:
+            except expected_exceptions as e:
+                exception_message = str(e)
                 pass
             except StopIteration:
                 exc_info = sys.exc_info()
@@ -53,7 +55,7 @@ def iterwait(predicate, timeout_seconds=None, sleep_seconds=1, result=None, wait
                 cancel_sleep()
                 return
             if timeout.is_expired():
-                raise TimeoutExpired(timeout_seconds, waiting_for)
+                raise TimeoutExpired(timeout_seconds, waiting_for + exception_message)
             yield
 
 
